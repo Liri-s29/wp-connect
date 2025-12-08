@@ -18,11 +18,10 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "@wppconnect-team/wppconnect": "https://github.com/wppconnect-team/wppconnect/releases/download/nightly/wppconnect-nightly.tgz",
-    "@prisma/client": "^5.0.0",
     "@google/genai": "^0.9.0",
+    "@prisma/client": "^5.0.0",
+    "@wppconnect-team/wppconnect": "https://github.com/wppconnect-team/wppconnect/releases/download/nightly/wppconnect-nightly.tgz",
     "dotenv": "^16.4.0",
-    "fuse.js": "^7.0.0",
     "openai": "^4.73.0"
   },
   "devDependencies": {

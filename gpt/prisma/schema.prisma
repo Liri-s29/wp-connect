@@ -39,6 +39,7 @@ model Product {
   storageGb         String?   @map("storage_gb")
   color             String?
   warranty          String?
+  batteryHealth     String?   @map("battery_health")
 
   // State / tracking
   dataHash          String?   @map("data_hash")

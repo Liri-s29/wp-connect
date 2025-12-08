@@ -46,6 +46,7 @@ type EnrichmentResult = {
   storageGb: string | null;
   color: string | null;
   warranty: string | null;
+  batteryHealth: string | null;
 };
 
 function emptyResult(id: string): EnrichmentResult {
@@ -55,6 +56,7 @@ function emptyResult(id: string): EnrichmentResult {
     storageGb: null,
     color: null,
     warranty: null,
+    batteryHealth: null,
   };
 }
 
@@ -82,9 +84,10 @@ For each input product, extract:
 - "storageGb": storage capacity with unit (e.g. "128 GB").
 - "color": short color description.
 - "warranty": short warranty description if present, else "".
+- "batteryHealth": battery health percentage if present (e.g. "85%", "90%"), else "". Note: also commonly written as "BH" or "bh".
 
 Return a STRICT JSON array with one element per input product, in the SAME ORDER, with keys:
-["id","modelName","storageGb","color","warranty"].
+["id","modelName","storageGb","color","warranty","batteryHealth"].
 Do not include any extra text before or after the JSON.
 
 Products:
@@ -138,6 +141,10 @@ ${JSON.stringify(payload, null, 2)}
         warranty:
           typeof enriched.warranty === 'string' && enriched.warranty.trim().length > 0
             ? enriched.warranty
+            : null,
+        batteryHealth:
+          typeof enriched.batteryHealth === 'string' && enriched.batteryHealth.trim().length > 0
+            ? enriched.batteryHealth
             : null,
       };
     });
@@ -244,6 +251,10 @@ ${JSON.stringify(payload, null, 2)}
           typeof enriched.warranty === 'string' && enriched.warranty.trim().length > 0
             ? enriched.warranty
             : null,
+        batteryHealth:
+          typeof enriched.batteryHealth === 'string' && enriched.batteryHealth.trim().length > 0
+            ? enriched.batteryHealth
+            : null,
       };
     });
   } catch (error) {
@@ -303,6 +314,7 @@ async function main() {
       storageGb: enriched.storageGb,
       color: enriched.color,
       warranty: enriched.warranty,
+      batteryHealth: enriched.batteryHealth,
     };
   });
 

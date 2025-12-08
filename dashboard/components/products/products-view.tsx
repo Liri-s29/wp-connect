@@ -25,6 +25,7 @@ type Product = {
   storageGb: string | null
   color: string | null
   warranty: string | null
+  batteryHealth: string | null
   isActive: boolean
   firstSeenAt: Date
   lastSeenAt: Date
@@ -66,6 +67,7 @@ export function ProductsView({ products }: ProductsViewProps) {
       product.storageGb || '',
       product.color || '',
       product.warranty || '',
+      product.batteryHealth || '',
       product.seller.name || '',
       product.seller.phoneNumber,
     ],
@@ -146,6 +148,13 @@ export function ProductsView({ products }: ProductsViewProps) {
       key: 'warranty',
       header: 'Warranty',
       render: (product: Product) => product.warranty || '-',
+    },
+    {
+      key: 'batteryHealth',
+      header: 'Battery',
+      sortable: true,
+      sortValue: (product: Product) => product.batteryHealth || '',
+      render: (product: Product) => product.batteryHealth || '-',
     },
     {
       key: 'seller',
@@ -262,6 +271,12 @@ export function ProductsView({ products }: ProductsViewProps) {
                       <div>
                         <span className="text-muted-foreground">Warranty:</span>
                         <p className="font-medium">{product.warranty}</p>
+                      </div>
+                    )}
+                    {product.batteryHealth && (
+                      <div>
+                        <span className="text-muted-foreground">Battery:</span>
+                        <p className="font-medium">{product.batteryHealth}</p>
                       </div>
                     )}
                   </div>

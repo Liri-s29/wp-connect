@@ -2,7 +2,6 @@ import * as wppconnect from '@wppconnect-team/wppconnect';
 import * as fs from 'fs';
 import * as path from 'path';
 import { config as loadEnv } from 'dotenv';
-import Fuse from 'fuse.js';
 
 loadEnv();
 
@@ -51,9 +50,62 @@ type SellerConfig = {
   catalogueUrl?: string;
 };
 
-const iPhoneKeywords = [
-  'iphone', 'i phone', 'iph',
-];
+// Strict iPhone detection - only actual iPhone devices, not accessories
+function isIPhone(name: string, description: string): boolean {
+  const nameLower = name.toLowerCase();
+  const descLower = (description || '').toLowerCase();
+
+  // Check if name contains iPhone variants
+  const iphoneInName =
+    /iphone|i\s*phone|i-phone/.test(nameLower) ||
+    /^iph\s*\d/.test(nameLower) || // "Iph 11", "Iph 13"
+    /^\d+\s*(pro|plus|max)?\s*\d*\s*gb/i.test(nameLower); // "14 Pro 256gb" style
+
+  // Also check description for iPhone mentions
+  const iphoneInDesc = /iphone|i\s*phone/.test(descLower);
+
+  // Must have iPhone keyword somewhere
+  if (!iphoneInName && !iphoneInDesc) return false;
+
+  // If name has iPhone, check it's not primarily an accessory
+  if (iphoneInName) {
+    const accessoryStartPatterns = [
+      /^case\b/,
+      /^cover\b/,
+      /^strap\b/,
+      /^charger\b/,
+      /^cable\b/,
+      /^adapter\b/,
+      /^screen\s*guard/,
+      /^tempered/,
+      /^protector/,
+      /^airpod/,
+      /^earbud/,
+      /^tws\b/,
+      /^speaker/,
+      /^powerbank/,
+      /^power\s*bank/,
+    ];
+
+    for (const pattern of accessoryStartPatterns) {
+      if (pattern.test(nameLower)) return false;
+    }
+
+    return true;
+  }
+
+  // If iPhone only in description, name should look like a phone model
+  if (iphoneInDesc) {
+    const looksLikeModel =
+      /^\d+\s*(pro|plus|max|mini)?/i.test(nameLower) ||
+      /^(xs|xr|se|x)\b/i.test(nameLower) ||
+      /pro\s*max/i.test(nameLower);
+
+    if (looksLikeModel) return true;
+  }
+
+  return false;
+}
 
 
 function toCsvExportUrl(url: string): string {
@@ -180,39 +232,20 @@ async function scrapeCatalogForSeller(
 
   console.log(`Total unique products for ${sellerPhone}: ${allProducts.size}`);
 
-  // Prepare products array for Fuse.js search
+  // Filter to only iPhone products using strict matching
   const productsArray = Array.from(allProducts.values());
-  
-  // Create Fuse instance with threshold 0.3 for fuzzy matching
-  const fuse = new Fuse(productsArray, {
-    keys: ['name', 'description'],
-    threshold: 0.3,
-    includeScore: true,
-  });
+  const iPhoneProducts = productsArray.filter((p) => isIPhone(p.name || '', p.description || ''));
 
-  // Collect all products that match any iPhone keyword using Fuse.js
-  const matchedProductIds = new Set<string>();
-  for (const keyword of iPhoneKeywords) {
-    const results = fuse.search(keyword);
-    for (const result of results) {
-      // Only include matches with score <= 0.3 (good match)
-      if (result.score !== undefined && result.score <= 0.3) {
-        matchedProductIds.add(result.item.id);
-      }
-    }
-  }
-
-  const iPhoneProducts = productsArray.filter((product) => matchedProductIds.has(product.id));
   console.log(
-    `Found ${iPhoneProducts.length} iPhone-related products out of ${allProducts.size} total for ${sellerPhone}`,
+    `Found ${iPhoneProducts.length} iPhone products out of ${allProducts.size} total for ${sellerPhone}`,
   );
 
   if (iPhoneProducts.length === 0) {
-    console.log('No iPhone products found. Processing all products for this seller...');
+    console.log('No iPhone products found for this seller. Skipping...');
+    return [];
   }
 
-  const selectedProducts =
-    iPhoneProducts.length > 0 ? iPhoneProducts : productsArray;
+  const selectedProducts = iPhoneProducts;
 
   const outputList: ScrapedProduct[] = [];
 

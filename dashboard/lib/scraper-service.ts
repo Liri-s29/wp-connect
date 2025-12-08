@@ -3,8 +3,9 @@ import path from 'path'
 import { prisma } from './prisma'
 import * as cron from 'node-cron'
 
-type ScraperStatus = 'RUNNING' | 'COMPLETED' | 'FAILED' | 'AUTH_REQUIRED'
+type ScraperStatus = 'RUNNING' | 'COMPLETED' | 'FAILED' | 'AUTH_REQUIRED' | 'ENRICHING' | 'PROCESSING' | 'ENRICHMENT_FAILED' | 'PROCESSING_FAILED'
 type TriggerType = 'MANUAL' | 'SCHEDULED'
+type PipelineStep = 'IDLE' | 'SCRAPING' | 'ENRICHING' | 'PROCESSING'
 
 interface ScraperOutput {
   type: 'stdout' | 'stderr' | 'status' | 'complete'
@@ -15,14 +16,19 @@ interface ScraperOutput {
 type OutputCallback = (output: ScraperOutput) => void
 
 class ScraperService {
-  private currentProcess: ChildProcess | null = null
   private currentRunId: number | null = null
   private outputBuffer: string[] = []
   private listeners: Set<OutputCallback> = new Set()
   private scheduledTask: cron.ScheduledTask | null = null
+  private pipelineStep: PipelineStep = 'IDLE'
+  private abortRequested: boolean = false
 
   isRunning(): boolean {
-    return this.currentProcess !== null
+    return this.pipelineStep !== 'IDLE'
+  }
+
+  getCurrentStep(): PipelineStep {
+    return this.pipelineStep
   }
 
   getCurrentRunId(): number | null {
@@ -38,9 +44,64 @@ class ScraperService {
     this.listeners.forEach((cb) => cb(output))
   }
 
+  /**
+   * Runs a command and streams output to listeners
+   * Returns a promise that resolves with exit code and output
+   */
+  private runCommand(
+    command: string,
+    args: string[],
+    cwd: string
+  ): Promise<{ code: number; output: string }> {
+    return new Promise((resolve) => {
+      const commandOutput: string[] = []
+
+      const childProcess = spawn(command, args, {
+        cwd,
+        shell: true,
+        env: { ...process.env },
+      })
+
+      childProcess.stdout?.on('data', (data: Buffer) => {
+        const text = data.toString()
+        commandOutput.push(text)
+        this.outputBuffer.push(text)
+        this.broadcast({
+          type: 'stdout',
+          data: text,
+          timestamp: new Date(),
+        })
+      })
+
+      childProcess.stderr?.on('data', (data: Buffer) => {
+        const text = data.toString()
+        commandOutput.push(`[ERROR] ${text}`)
+        this.outputBuffer.push(`[ERROR] ${text}`)
+        this.broadcast({
+          type: 'stderr',
+          data: text,
+          timestamp: new Date(),
+        })
+      })
+
+      childProcess.on('close', (code) => {
+        resolve({ code: code ?? 1, output: commandOutput.join('') })
+      })
+
+      childProcess.on('error', (error) => {
+        this.broadcast({
+          type: 'stderr',
+          data: `Process error: ${error.message}`,
+          timestamp: new Date(),
+        })
+        resolve({ code: 1, output: commandOutput.join('') })
+      })
+    })
+  }
+
   async startScraper(triggerType: TriggerType): Promise<{ runId: number; error?: string }> {
     if (this.isRunning()) {
-      return { runId: -1, error: 'Scraper is already running' }
+      return { runId: -1, error: `Pipeline is already running (step: ${this.pipelineStep})` }
     }
 
     // Create a new run record
@@ -53,121 +114,151 @@ class ScraperService {
 
     this.currentRunId = run.id
     this.outputBuffer = []
+    this.abortRequested = false
 
-    // Path to the scraper script
     const scraperPath = path.resolve(process.cwd(), '../gpt')
 
-    this.broadcast({
-      type: 'status',
-      data: `Starting scraper (Run #${run.id})...`,
-      timestamp: new Date(),
-    })
+    // Start the full pipeline asynchronously
+    this.runFullPipeline(run.id, scraperPath)
+
+    return { runId: run.id }
+  }
+
+  /**
+   * Runs the full pipeline: Scrape → Enrich → Process
+   */
+  private async runFullPipeline(runId: number, scraperPath: string): Promise<void> {
+    let finalStatus: ScraperStatus = 'COMPLETED'
+    let errorMessage: string | null = null
 
     try {
-      // Spawn the scraper process
-      this.currentProcess = spawn('npm', ['start'], {
-        cwd: scraperPath,
-        shell: true,
-        env: { ...process.env },
+      // ===== STEP 1: SCRAPING =====
+      this.pipelineStep = 'SCRAPING'
+      this.broadcast({
+        type: 'status',
+        data: `\n${'='.repeat(50)}\n[STEP 1/3] Starting scraper (Run #${runId})...\n${'='.repeat(50)}\n`,
+        timestamp: new Date(),
       })
 
-      this.currentProcess.stdout?.on('data', (data: Buffer) => {
-        const text = data.toString()
-        this.outputBuffer.push(text)
-        this.broadcast({
-          type: 'stdout',
-          data: text,
-          timestamp: new Date(),
-        })
+      const scrapeResult = await this.runCommand('npm', ['start'], scraperPath)
+
+      // Check if auth was required
+      if (scrapeResult.output.includes('scan QR code') || scrapeResult.output.includes('QR code')) {
+        finalStatus = 'AUTH_REQUIRED'
+        errorMessage = 'WhatsApp authentication required'
+        return
+      }
+
+      if (scrapeResult.code !== 0) {
+        finalStatus = 'FAILED'
+        errorMessage = `Scraping failed with exit code ${scrapeResult.code}`
+        return
+      }
+
+      if (this.abortRequested) {
+        finalStatus = 'FAILED'
+        errorMessage = 'Pipeline aborted by user'
+        return
+      }
+
+      // ===== STEP 2: ENRICHMENT =====
+      this.pipelineStep = 'ENRICHING'
+      this.broadcast({
+        type: 'status',
+        data: `\n${'='.repeat(50)}\n[STEP 2/3] Starting LLM enrichment...\n${'='.repeat(50)}\n`,
+        timestamp: new Date(),
       })
 
-      this.currentProcess.stderr?.on('data', (data: Buffer) => {
-        const text = data.toString()
-        this.outputBuffer.push(`[ERROR] ${text}`)
-        this.broadcast({
-          type: 'stderr',
-          data: text,
-          timestamp: new Date(),
-        })
-      })
-
-      this.currentProcess.on('close', async (code) => {
-        const output = this.outputBuffer.join('')
-        let status: ScraperStatus = code === 0 ? 'COMPLETED' : 'FAILED'
-
-        // Check if auth was required
-        if (output.includes('scan QR code') || output.includes('QR code')) {
-          status = 'AUTH_REQUIRED'
-        }
-
-        // Parse stats from output
-        const sellersMatch = output.match(/(\d+) seller\(s\)/)
-        const productsMatch = output.match(/Saved (\d+) products/)
-
-        await prisma.scraperRun.update({
-          where: { id: run.id },
-          data: {
-            status,
-            completedAt: new Date(),
-            output,
-            errorMessage: code !== 0 ? `Process exited with code ${code}` : null,
-            sellersProcessed: sellersMatch ? parseInt(sellersMatch[1]) : 0,
-            productsScraped: productsMatch ? parseInt(productsMatch[1]) : 0,
-          },
-        })
-
-        this.broadcast({
-          type: 'complete',
-          data: `Scraper finished with status: ${status}`,
-          timestamp: new Date(),
-        })
-
-        this.currentProcess = null
-        this.currentRunId = null
-      })
-
-      this.currentProcess.on('error', async (error) => {
-        await prisma.scraperRun.update({
-          where: { id: run.id },
-          data: {
-            status: 'FAILED',
-            completedAt: new Date(),
-            output: this.outputBuffer.join(''),
-            errorMessage: error.message,
-          },
-        })
-
-        this.broadcast({
-          type: 'stderr',
-          data: `Process error: ${error.message}`,
-          timestamp: new Date(),
-        })
-
-        this.currentProcess = null
-        this.currentRunId = null
-      })
-
-      return { runId: run.id }
-    } catch (error) {
       await prisma.scraperRun.update({
-        where: { id: run.id },
+        where: { id: runId },
+        data: { status: 'ENRICHING' },
+      })
+
+      const enrichResult = await this.runCommand('npm', ['run', 'enrich'], scraperPath)
+
+      if (enrichResult.code !== 0) {
+        finalStatus = 'ENRICHMENT_FAILED'
+        errorMessage = `Enrichment failed with exit code ${enrichResult.code}`
+        return
+      }
+
+      if (this.abortRequested) {
+        finalStatus = 'FAILED'
+        errorMessage = 'Pipeline aborted by user'
+        return
+      }
+
+      // ===== STEP 3: DATABASE PROCESSING =====
+      this.pipelineStep = 'PROCESSING'
+      this.broadcast({
+        type: 'status',
+        data: `\n${'='.repeat(50)}\n[STEP 3/3] Updating database...\n${'='.repeat(50)}\n`,
+        timestamp: new Date(),
+      })
+
+      await prisma.scraperRun.update({
+        where: { id: runId },
+        data: { status: 'PROCESSING' },
+      })
+
+      const processResult = await this.runCommand('npm', ['run', 'processor'], scraperPath)
+
+      if (processResult.code !== 0) {
+        finalStatus = 'PROCESSING_FAILED'
+        errorMessage = `Database processing failed with exit code ${processResult.code}`
+        return
+      }
+
+      // All steps completed successfully
+      finalStatus = 'COMPLETED'
+    } catch (error) {
+      finalStatus = 'FAILED'
+      errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    } finally {
+      // Parse stats from full output
+      const fullOutput = this.outputBuffer.join('')
+      const sellersMatch = fullOutput.match(/(\d+) seller\(s\)/)
+      const productsMatch = fullOutput.match(/Saved (\d+) products/)
+
+      await prisma.scraperRun.update({
+        where: { id: runId },
         data: {
-          status: 'FAILED',
+          status: finalStatus,
           completedAt: new Date(),
-          errorMessage: error instanceof Error ? error.message : 'Unknown error',
+          output: fullOutput,
+          errorMessage,
+          sellersProcessed: sellersMatch ? parseInt(sellersMatch[1]) : 0,
+          productsScraped: productsMatch ? parseInt(productsMatch[1]) : 0,
         },
       })
 
-      this.currentProcess = null
-      this.currentRunId = null
+      this.broadcast({
+        type: 'status',
+        data: `\n${'='.repeat(50)}\nPipeline finished with status: ${finalStatus}\n${'='.repeat(50)}\n`,
+        timestamp: new Date(),
+      })
 
-      return { runId: run.id, error: error instanceof Error ? error.message : 'Unknown error' }
+      this.broadcast({
+        type: 'complete',
+        data: finalStatus,
+        timestamp: new Date(),
+      })
+
+      // Reset state
+      this.pipelineStep = 'IDLE'
+      this.currentRunId = null
+      this.abortRequested = false
     }
   }
 
   stopScraper(): boolean {
-    if (this.currentProcess) {
-      this.currentProcess.kill('SIGTERM')
+    if (this.isRunning()) {
+      this.abortRequested = true
+      this.broadcast({
+        type: 'status',
+        data: '\n⚠️ Abort requested. Pipeline will stop after current step completes.\n',
+        timestamp: new Date(),
+      })
       return true
     }
     return false

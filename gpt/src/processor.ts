@@ -45,6 +45,7 @@ function buildSnapshot(args: {
     storageGb: string | null;
     color: string | null;
     warranty: string | null;
+    batteryHealth: string | null;
     dataHash: string | null;
     isActive: boolean;
     firstSeenAt: Date;
@@ -73,6 +74,7 @@ function buildSnapshot(args: {
     storageGb: productRow.storageGb,
     color: productRow.color,
     warranty: productRow.warranty,
+    batteryHealth: productRow.batteryHealth,
     dataHash: productRow.dataHash,
     isActive: productRow.isActive,
     firstSeenAt: productRow.firstSeenAt,
@@ -263,6 +265,7 @@ async function processSellerGroup(
                 storageGb: input.storageGb ?? null,
                 color: input.color ?? null,
                 warranty: input.warranty ?? null,
+                batteryHealth: input.batteryHealth ?? null,
               },
             }));
 
@@ -290,6 +293,7 @@ async function processSellerGroup(
                 storageGb: input.storageGb ?? null,
                 color: input.color ?? null,
                 warranty: input.warranty ?? null,
+                batteryHealth: input.batteryHealth ?? null,
               },
             });
           }

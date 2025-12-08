@@ -34,5 +34,6 @@ export async function GET() {
   return NextResponse.json({
     isRunning: scraperService.isRunning(),
     currentRunId: scraperService.getCurrentRunId(),
+    currentStep: scraperService.getCurrentStep(),
   })
 }
