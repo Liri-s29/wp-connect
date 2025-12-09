@@ -3,6 +3,8 @@ import { ScanLogsView } from '@/components/scan-logs/scan-logs-view'
 import { Suspense } from 'react'
 import { Skeleton } from '@/components/ui/skeleton'
 
+export const dynamic = 'force-dynamic'
+
 export default async function ScanLogsPage() {
   const logs = await getScanLogs()
 

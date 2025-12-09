@@ -3,6 +3,8 @@ import { ProductHistoryView } from '@/components/product-history/product-history
 import { Suspense } from 'react'
 import { Skeleton } from '@/components/ui/skeleton'
 
+export const dynamic = 'force-dynamic'
+
 export default async function ProductHistoryPage() {
   const history = await getProductHistory()
 

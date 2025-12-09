@@ -3,6 +3,8 @@ import { ProductsView } from '@/components/products/products-view'
 import { Suspense } from 'react'
 import { Skeleton } from '@/components/ui/skeleton'
 
+export const dynamic = 'force-dynamic'
+
 export default async function ProductsPage() {
   const products = await getProducts()
 
