@@ -12,6 +12,7 @@ import { Pagination } from '@/components/pagination'
 import { useSearchPagination } from '@/hooks/use-search-pagination'
 import { useProductFilters } from '@/hooks/use-product-filters'
 import { useSavedViews, SavedView } from '@/hooks/use-saved-views'
+import { useColumnOrder } from '@/hooks/use-column-order'
 import { SellerDetailsModal } from '@/components/seller-details-modal'
 import { FiltersSidebar } from './filters-sidebar'
 import { ColumnCustomizer } from './column-customizer'
@@ -23,6 +24,7 @@ import {
   FilterOptions,
   ColumnKey,
   ALL_COLUMNS,
+  DEFAULT_VISIBLE_COLUMNS,
   hasActiveFilters,
   countActiveFilters,
 } from './filter-controls/filter-types'
@@ -89,6 +91,16 @@ export function ProductsView({ products }: ProductsViewProps) {
     setDefaultView,
     getDefaultView,
   } = useSavedViews()
+
+  // Column ordering
+  const {
+    columnOrder,
+    reorderColumns,
+    setOrder: setColumnOrder,
+    getOrderedColumns,
+  } = useColumnOrder<ColumnKey>({
+    defaultOrder: DEFAULT_VISIBLE_COLUMNS,
+  })
 
   // Fetch filter options on mount
   useEffect(() => {
@@ -174,6 +186,10 @@ export function ProductsView({ products }: ProductsViewProps) {
       sortKey: view.sortKey,
       sortDir: view.sortDir as 'asc' | 'desc' | null,
     })
+    // Apply column order from saved view
+    if (view.columnOrder && view.columnOrder.length > 0) {
+      setColumnOrder(view.columnOrder)
+    }
   }
 
   const handleSaveView = async (data: {
@@ -187,6 +203,7 @@ export function ProductsView({ products }: ProductsViewProps) {
       description: data.description,
       filters: config.filters,
       columns: config.columns,
+      columnOrder: columnOrder,
       sortKey: config.sortKey,
       sortDir: config.sortDir,
       isDefault: data.isDefault,
@@ -337,10 +354,11 @@ export function ProductsView({ products }: ProductsViewProps) {
     []
   )
 
-  // Filter columns based on visibility
+  // Filter and order columns based on visibility and order
   const tableColumns = useMemo(() => {
-    return allTableColumns.filter((col) => visibleColumns.includes(col.key as ColumnKey))
-  }, [allTableColumns, visibleColumns])
+    const visibleCols = allTableColumns.filter((col) => visibleColumns.includes(col.key as ColumnKey))
+    return getOrderedColumns(visibleCols)
+  }, [allTableColumns, visibleColumns, getOrderedColumns])
 
   const activeFiltersCount = countActiveFilters(filters)
 
@@ -414,7 +432,11 @@ export function ProductsView({ products }: ProductsViewProps) {
       {/* Data Display */}
       {view === 'table' ? (
         <>
-          <DataTable data={paginatedData} columns={tableColumns} />
+          <DataTable
+            data={paginatedData}
+            columns={tableColumns}
+            onColumnReorder={reorderColumns}
+          />
           <Pagination
             currentPage={currentPage}
             totalPages={totalPages}

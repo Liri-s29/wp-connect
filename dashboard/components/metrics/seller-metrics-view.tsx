@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { PageHeader } from '@/components/layout/page-header'
 import { ViewToggle } from '@/components/view-toggle'
 import { DataTable } from '@/components/data-table'
@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Pagination } from '@/components/pagination'
 import { useSearchPagination } from '@/hooks/use-search-pagination'
+import { useColumnOrder } from '@/hooks/use-column-order'
 import { Button } from '@/components/ui/button'
 import { ExternalLink, Phone, MapPin } from 'lucide-react'
 import type { SellerMetric } from '@/lib/queries'
@@ -19,6 +20,31 @@ interface SellerMetricsViewProps {
 
 type FilterType = 'all' | 'valid' | 'invalid'
 
+type SellerMetricColumnKey =
+  | 'seller_name'
+  | 'seller_contact'
+  | 'city'
+  | 'phones_last_week'
+  | 'active_avg_listings_week'
+  | 'product_info_score'
+  | 'avg_listings_week'
+  | 'current_active_inventory'
+  | 'total_phones'
+  | 'seller_url'
+
+const DEFAULT_COLUMN_ORDER: SellerMetricColumnKey[] = [
+  'seller_name',
+  'seller_contact',
+  'city',
+  'phones_last_week',
+  'active_avg_listings_week',
+  'product_info_score',
+  'avg_listings_week',
+  'current_active_inventory',
+  'total_phones',
+  'seller_url',
+]
+
 export function SellerMetricsView({ metrics }: SellerMetricsViewProps) {
   const [view, setView] = useState<'table' | 'cards'>('table')
   const [filter, setFilter] = useState<FilterType>('all')
@@ -27,6 +53,11 @@ export function SellerMetricsView({ metrics }: SellerMetricsViewProps) {
     if (filter === 'valid') return m.is_valid
     if (filter === 'invalid') return !m.is_valid
     return true
+  })
+
+  // Column ordering
+  const { reorderColumns, getOrderedColumns } = useColumnOrder<SellerMetricColumnKey>({
+    defaultOrder: DEFAULT_COLUMN_ORDER,
   })
 
   const {
@@ -65,95 +96,103 @@ export function SellerMetricsView({ metrics }: SellerMetricsViewProps) {
     return `${score.toFixed(1)}/6`
   }
 
-  const tableColumns = [
-    {
-      key: 'seller_name',
-      header: 'Seller Name',
-      sortable: true,
-      sortValue: (metric: SellerMetric) => metric.seller_name || '',
-      render: (metric: SellerMetric) => metric.seller_name || '-',
-    },
-    {
-      key: 'seller_contact',
-      header: 'Contact',
-      sortable: true,
-      sortValue: (metric: SellerMetric) => metric.seller_phone,
-      render: (metric: SellerMetric) => (
-        <span className="font-mono text-sm">{metric.seller_phone}</span>
-      ),
-    },
-    {
-      key: 'city',
-      header: 'City',
-      sortable: true,
-      sortValue: (metric: SellerMetric) => metric.city || '',
-      render: (metric: SellerMetric) => metric.city || '-',
-    },
-    {
-      key: 'phones_last_week',
-      header: 'Phones Last Week',
-      sortable: true,
-      sortValue: (metric: SellerMetric) => metric.phones_last_week,
-      render: (metric: SellerMetric) => metric.phones_last_week,
-    },
-    {
-      key: 'active_avg_listings_week',
-      header: 'Active Avg/Week',
-      sortable: true,
-      sortValue: (metric: SellerMetric) => metric.active_avg_listings_week,
-      render: (metric: SellerMetric) => metric.active_avg_listings_week.toFixed(1),
-    },
-    {
-      key: 'product_info_score',
-      header: 'Product Info Score',
-      sortable: true,
-      sortValue: (metric: SellerMetric) => metric.product_info_score,
-      render: (metric: SellerMetric) => (
-        <Badge variant={getScoreBadgeVariant(metric.product_info_score)}>
-          {getScoreLabel(metric.product_info_score)}
-        </Badge>
-      ),
-    },
-    {
-      key: 'avg_listings_week',
-      header: 'Avg Listing/Week',
-      sortable: true,
-      sortValue: (metric: SellerMetric) => metric.avg_listings_week,
-      render: (metric: SellerMetric) => metric.avg_listings_week.toFixed(1),
-    },
-    {
-      key: 'current_active_inventory',
-      header: 'Active (3 days)',
-      sortable: true,
-      sortValue: (metric: SellerMetric) => metric.current_active_inventory,
-      render: (metric: SellerMetric) => metric.current_active_inventory,
-    },
-    {
-      key: 'total_phones',
-      header: 'Total Phones',
-      sortable: true,
-      sortValue: (metric: SellerMetric) => metric.total_phones,
-      render: (metric: SellerMetric) => metric.total_phones,
-    },
-    {
-      key: 'seller_url',
-      header: 'Seller URL',
-      render: (metric: SellerMetric) =>
-        metric.catalogue_url ? (
-          <a
-            href={metric.catalogue_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 text-blue-600 hover:underline"
-          >
-            <ExternalLink className="h-3 w-3" />
-            Open
-          </a>
-        ) : (
-          '-'
+  const allTableColumns = useMemo(
+    () => [
+      {
+        key: 'seller_name',
+        header: 'Seller Name',
+        sortable: true,
+        sortValue: (metric: SellerMetric) => metric.seller_name || '',
+        render: (metric: SellerMetric) => metric.seller_name || '-',
+      },
+      {
+        key: 'seller_contact',
+        header: 'Contact',
+        sortable: true,
+        sortValue: (metric: SellerMetric) => metric.seller_phone,
+        render: (metric: SellerMetric) => (
+          <span className="font-mono text-sm">{metric.seller_phone}</span>
         ),
-    },
-  ]
+      },
+      {
+        key: 'city',
+        header: 'City',
+        sortable: true,
+        sortValue: (metric: SellerMetric) => metric.city || '',
+        render: (metric: SellerMetric) => metric.city || '-',
+      },
+      {
+        key: 'phones_last_week',
+        header: 'Phones Last Week',
+        sortable: true,
+        sortValue: (metric: SellerMetric) => metric.phones_last_week,
+        render: (metric: SellerMetric) => metric.phones_last_week,
+      },
+      {
+        key: 'active_avg_listings_week',
+        header: 'Active Avg/Week',
+        sortable: true,
+        sortValue: (metric: SellerMetric) => metric.active_avg_listings_week,
+        render: (metric: SellerMetric) => metric.active_avg_listings_week.toFixed(1),
+      },
+      {
+        key: 'product_info_score',
+        header: 'Product Info Score',
+        sortable: true,
+        sortValue: (metric: SellerMetric) => metric.product_info_score,
+        render: (metric: SellerMetric) => (
+          <Badge variant={getScoreBadgeVariant(metric.product_info_score)}>
+            {getScoreLabel(metric.product_info_score)}
+          </Badge>
+        ),
+      },
+      {
+        key: 'avg_listings_week',
+        header: 'Avg Listing/Week',
+        sortable: true,
+        sortValue: (metric: SellerMetric) => metric.avg_listings_week,
+        render: (metric: SellerMetric) => metric.avg_listings_week.toFixed(1),
+      },
+      {
+        key: 'current_active_inventory',
+        header: 'Active (3 days)',
+        sortable: true,
+        sortValue: (metric: SellerMetric) => metric.current_active_inventory,
+        render: (metric: SellerMetric) => metric.current_active_inventory,
+      },
+      {
+        key: 'total_phones',
+        header: 'Total Phones',
+        sortable: true,
+        sortValue: (metric: SellerMetric) => metric.total_phones,
+        render: (metric: SellerMetric) => metric.total_phones,
+      },
+      {
+        key: 'seller_url',
+        header: 'Seller URL',
+        render: (metric: SellerMetric) =>
+          metric.catalogue_url ? (
+            <a
+              href={metric.catalogue_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-blue-600 hover:underline"
+            >
+              <ExternalLink className="h-3 w-3" />
+              Open
+            </a>
+          ) : (
+            '-'
+          ),
+      },
+    ],
+    []
+  )
+
+  const tableColumns = useMemo(
+    () => getOrderedColumns(allTableColumns),
+    [allTableColumns, getOrderedColumns]
+  )
 
   return (
     <div className="space-y-6">
@@ -171,7 +210,11 @@ export function SellerMetricsView({ metrics }: SellerMetricsViewProps) {
 
       {view === 'table' ? (
         <>
-          <DataTable data={paginatedData} columns={tableColumns} />
+          <DataTable
+            data={paginatedData}
+            columns={tableColumns}
+            onColumnReorder={reorderColumns}
+          />
           <Pagination
             currentPage={currentPage}
             totalPages={totalPages}

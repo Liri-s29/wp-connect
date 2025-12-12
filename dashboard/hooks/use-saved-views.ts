@@ -9,6 +9,7 @@ export type SavedView = {
   description: string | null
   filters: ProductFilters
   columns: ColumnKey[]
+  columnOrder: ColumnKey[]
   sortKey: string | null
   sortDir: string | null
   isDefault: boolean
@@ -49,6 +50,7 @@ export function useSavedViews() {
       description?: string
       filters: ProductFilters
       columns: ColumnKey[]
+      columnOrder?: ColumnKey[]
       sortKey?: string | null
       sortDir?: 'asc' | 'desc' | null
       isDefault?: boolean
@@ -85,6 +87,7 @@ export function useSavedViews() {
         description: string | null
         filters: ProductFilters
         columns: ColumnKey[]
+        columnOrder: ColumnKey[]
         sortKey: string | null
         sortDir: 'asc' | 'desc' | null
         isDefault: boolean

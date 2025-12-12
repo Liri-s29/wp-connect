@@ -118,6 +118,7 @@ model SavedView {
   // View configuration stored as JSON
   filters     Json     @default("{}")
   columns     String[] @default([])
+  columnOrder String[] @default([]) @map("column_order")
   sortKey     String?  @db.VarChar(50) @map("sort_key")
   sortDir     String?  @db.VarChar(10) @map("sort_dir")
 

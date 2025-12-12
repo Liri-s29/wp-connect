@@ -37,7 +37,7 @@ export async function PUT(
 ) {
   try {
     const body = await request.json()
-    const { name, description, filters, columns, sortKey, sortDir, isDefault } = body
+    const { name, description, filters, columns, columnOrder, sortKey, sortDir, isDefault } = body
 
     // Check if view exists
     const existingView = await prisma.savedView.findUnique({
@@ -66,6 +66,7 @@ export async function PUT(
         description: description !== undefined ? description?.trim() || null : existingView.description,
         filters: filters ?? existingView.filters,
         columns: columns ?? existingView.columns,
+        columnOrder: columnOrder ?? existingView.columnOrder,
         sortKey: sortKey !== undefined ? sortKey : existingView.sortKey,
         sortDir: sortDir !== undefined ? sortDir : existingView.sortDir,
         isDefault: isDefault ?? existingView.isDefault,

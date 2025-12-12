@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { PageHeader } from '@/components/layout/page-header'
 import { ViewToggle } from '@/components/view-toggle'
 import { DataTable } from '@/components/data-table'
@@ -8,6 +8,7 @@ import { CardGrid } from '@/components/card-grid'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Pagination } from '@/components/pagination'
 import { useSearchPagination } from '@/hooks/use-search-pagination'
+import { useColumnOrder } from '@/hooks/use-column-order'
 import { ExternalLink, Phone, MapPin, Calendar } from 'lucide-react'
 import type { Seller } from '@prisma/client'
 
@@ -15,8 +16,23 @@ interface SellersViewProps {
   sellers: Seller[]
 }
 
+type SellerColumnKey = 'phoneNumber' | 'name' | 'city' | 'catalogueUrl' | 'createdAt'
+
+const DEFAULT_COLUMN_ORDER: SellerColumnKey[] = [
+  'phoneNumber',
+  'name',
+  'city',
+  'catalogueUrl',
+  'createdAt',
+]
+
 export function SellersView({ sellers }: SellersViewProps) {
   const [view, setView] = useState<'table' | 'cards'>('table')
+
+  // Column ordering
+  const { reorderColumns, getOrderedColumns } = useColumnOrder<SellerColumnKey>({
+    defaultOrder: DEFAULT_COLUMN_ORDER,
+  })
 
   const {
     searchQuery,
@@ -38,57 +54,65 @@ export function SellersView({ sellers }: SellersViewProps) {
     10
   )
 
-  const tableColumns = [
-    {
-      key: 'phoneNumber',
-      header: 'Phone Number',
-      sortable: true,
-      sortValue: (seller: Seller) => seller.phoneNumber,
-      render: (seller: Seller) => (
-        <span className="font-mono">{seller.phoneNumber}</span>
-      ),
-    },
-    {
-      key: 'name',
-      header: 'Name',
-      sortable: true,
-      sortValue: (seller: Seller) => seller.name || '',
-      render: (seller: Seller) => seller.name || '-',
-    },
-    {
-      key: 'city',
-      header: 'City',
-      sortable: true,
-      sortValue: (seller: Seller) => seller.city || '',
-      render: (seller: Seller) => seller.city || '-',
-    },
-    {
-      key: 'catalogueUrl',
-      header: 'Catalog URL',
-      render: (seller: Seller) =>
-        seller.catalogueUrl ? (
-          <a
-            href={seller.catalogueUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 text-blue-600 hover:underline"
-          >
-            <ExternalLink className="h-3 w-3" />
-            Open
-          </a>
-        ) : (
-          '-'
+  const allTableColumns = useMemo(
+    () => [
+      {
+        key: 'phoneNumber',
+        header: 'Phone Number',
+        sortable: true,
+        sortValue: (seller: Seller) => seller.phoneNumber,
+        render: (seller: Seller) => (
+          <span className="font-mono">{seller.phoneNumber}</span>
         ),
-    },
-    {
-      key: 'createdAt',
-      header: 'Created',
-      sortable: true,
-      sortValue: (seller: Seller) => new Date(seller.createdAt),
-      render: (seller: Seller) =>
-        new Date(seller.createdAt).toLocaleDateString(),
-    },
-  ]
+      },
+      {
+        key: 'name',
+        header: 'Name',
+        sortable: true,
+        sortValue: (seller: Seller) => seller.name || '',
+        render: (seller: Seller) => seller.name || '-',
+      },
+      {
+        key: 'city',
+        header: 'City',
+        sortable: true,
+        sortValue: (seller: Seller) => seller.city || '',
+        render: (seller: Seller) => seller.city || '-',
+      },
+      {
+        key: 'catalogueUrl',
+        header: 'Catalog URL',
+        render: (seller: Seller) =>
+          seller.catalogueUrl ? (
+            <a
+              href={seller.catalogueUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-blue-600 hover:underline"
+            >
+              <ExternalLink className="h-3 w-3" />
+              Open
+            </a>
+          ) : (
+            '-'
+          ),
+      },
+      {
+        key: 'createdAt',
+        header: 'Created',
+        sortable: true,
+        sortValue: (seller: Seller) => new Date(seller.createdAt),
+        render: (seller: Seller) =>
+          new Date(seller.createdAt).toLocaleDateString(),
+      },
+    ],
+    []
+  )
+
+  const tableColumns = useMemo(
+    () => getOrderedColumns(allTableColumns),
+    [allTableColumns, getOrderedColumns]
+  )
 
   return (
     <div className="space-y-6">
@@ -106,7 +130,11 @@ export function SellersView({ sellers }: SellersViewProps) {
 
       {view === 'table' ? (
         <>
-          <DataTable data={paginatedData} columns={tableColumns} />
+          <DataTable
+            data={paginatedData}
+            columns={tableColumns}
+            onColumnReorder={reorderColumns}
+          />
           <Pagination
             currentPage={currentPage}
             totalPages={totalPages}

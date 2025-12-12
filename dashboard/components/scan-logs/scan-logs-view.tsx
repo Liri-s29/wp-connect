@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { PageHeader } from '@/components/layout/page-header'
 import { ViewToggle } from '@/components/view-toggle'
 import { DataTable } from '@/components/data-table'
@@ -8,6 +8,7 @@ import { CardGrid } from '@/components/card-grid'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Pagination } from '@/components/pagination'
 import { useSearchPagination } from '@/hooks/use-search-pagination'
+import { useColumnOrder } from '@/hooks/use-column-order'
 
 type ScanLog = {
   id: number
@@ -27,8 +28,24 @@ interface ScanLogsViewProps {
   logs: ScanLog[]
 }
 
+type ScanLogColumnKey = 'id' | 'seller' | 'scanTime' | 'productsFound' | 'productsNew' | 'productsUpdated'
+
+const DEFAULT_COLUMN_ORDER: ScanLogColumnKey[] = [
+  'id',
+  'seller',
+  'scanTime',
+  'productsFound',
+  'productsNew',
+  'productsUpdated',
+]
+
 export function ScanLogsView({ logs }: ScanLogsViewProps) {
   const [view, setView] = useState<'table' | 'cards'>('table')
+
+  // Column ordering
+  const { reorderColumns, getOrderedColumns } = useColumnOrder<ScanLogColumnKey>({
+    defaultOrder: DEFAULT_COLUMN_ORDER,
+  })
 
   const {
     searchQuery,
@@ -53,38 +70,46 @@ export function ScanLogsView({ logs }: ScanLogsViewProps) {
     10
   )
 
-  const tableColumns = [
-    {
-      key: 'id',
-      header: 'ID',
-      render: (log: ScanLog) => log.id,
-    },
-    {
-      key: 'seller',
-      header: 'Seller',
-      render: (log: ScanLog) => log.seller.name || log.seller.phoneNumber,
-    },
-    {
-      key: 'scanTime',
-      header: 'Scan Time',
-      render: (log: ScanLog) => new Date(log.scanTime).toLocaleString(),
-    },
-    {
-      key: 'productsFound',
-      header: 'Found',
-      render: (log: ScanLog) => log.productsFound,
-    },
-    {
-      key: 'productsNew',
-      header: 'New',
-      render: (log: ScanLog) => log.productsNew,
-    },
-    {
-      key: 'productsUpdated',
-      header: 'Updated',
-      render: (log: ScanLog) => log.productsUpdated,
-    },
-  ]
+  const allTableColumns = useMemo(
+    () => [
+      {
+        key: 'id',
+        header: 'ID',
+        render: (log: ScanLog) => log.id,
+      },
+      {
+        key: 'seller',
+        header: 'Seller',
+        render: (log: ScanLog) => log.seller.name || log.seller.phoneNumber,
+      },
+      {
+        key: 'scanTime',
+        header: 'Scan Time',
+        render: (log: ScanLog) => new Date(log.scanTime).toLocaleString(),
+      },
+      {
+        key: 'productsFound',
+        header: 'Found',
+        render: (log: ScanLog) => log.productsFound,
+      },
+      {
+        key: 'productsNew',
+        header: 'New',
+        render: (log: ScanLog) => log.productsNew,
+      },
+      {
+        key: 'productsUpdated',
+        header: 'Updated',
+        render: (log: ScanLog) => log.productsUpdated,
+      },
+    ],
+    []
+  )
+
+  const tableColumns = useMemo(
+    () => getOrderedColumns(allTableColumns),
+    [allTableColumns, getOrderedColumns]
+  )
 
   return (
     <div className="space-y-6">
@@ -102,7 +127,11 @@ export function ScanLogsView({ logs }: ScanLogsViewProps) {
 
       {view === 'table' ? (
         <>
-          <DataTable data={paginatedData} columns={tableColumns} />
+          <DataTable
+            data={paginatedData}
+            columns={tableColumns}
+            onColumnReorder={reorderColumns}
+          />
           <Pagination
             currentPage={currentPage}
             totalPages={totalPages}

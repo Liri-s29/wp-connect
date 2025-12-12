@@ -2,6 +2,21 @@
 
 import { useState, useMemo } from 'react'
 import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core'
+import {
+  SortableContext,
+  horizontalListSortingStrategy,
+  useSortable,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
+import {
   Table,
   TableBody,
   TableCell,
@@ -10,8 +25,9 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Skeleton } from '@/components/ui/skeleton'
-import { ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
+import { ArrowUpDown, ArrowUp, ArrowDown, GripVertical } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 
 interface Column<T> {
   key: string
@@ -25,13 +41,96 @@ interface DataTableProps<T> {
   data: T[]
   columns: Column<T>[]
   isLoading?: boolean
+  onColumnReorder?: (activeId: string, overId: string) => void
 }
 
 type SortDirection = 'asc' | 'desc' | null
 
-export function DataTable<T>({ data, columns, isLoading }: DataTableProps<T>) {
+interface SortableTableHeadProps {
+  column: Column<any>
+  sortKey: string | null
+  sortDirection: SortDirection
+  onSort: (key: string) => void
+  getSortIcon: (key: string) => React.ReactNode
+  isDraggable: boolean
+}
+
+function SortableTableHead({
+  column,
+  sortKey,
+  sortDirection,
+  onSort,
+  getSortIcon,
+  isDraggable,
+}: SortableTableHeadProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: column.key })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  }
+
+  return (
+    <TableHead
+      ref={setNodeRef}
+      style={style}
+      className={cn(
+        'whitespace-nowrap',
+        isDragging && 'opacity-50 bg-muted z-50'
+      )}
+    >
+      <div className="flex items-center gap-1">
+        {isDraggable && (
+          <button
+            className="cursor-grab active:cursor-grabbing p-0.5 hover:bg-muted rounded touch-none"
+            {...attributes}
+            {...listeners}
+          >
+            <GripVertical className="h-3 w-3 text-muted-foreground" />
+          </button>
+        )}
+        {column.sortable ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="-ml-1 h-8 data-[state=open]:bg-accent"
+            onClick={() => onSort(column.key)}
+          >
+            {column.header}
+            {getSortIcon(column.key)}
+          </Button>
+        ) : (
+          <span className="px-1">{column.header}</span>
+        )}
+      </div>
+    </TableHead>
+  )
+}
+
+export function DataTable<T>({
+  data,
+  columns,
+  isLoading,
+  onColumnReorder,
+}: DataTableProps<T>) {
   const [sortKey, setSortKey] = useState<string | null>(null)
   const [sortDirection, setSortDirection] = useState<SortDirection>(null)
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor)
+  )
 
   const handleSort = (key: string) => {
     if (sortKey === key) {
@@ -90,101 +189,108 @@ export function DataTable<T>({ data, columns, isLoading }: DataTableProps<T>) {
     return <ArrowUpDown className="ml-1 h-3 w-3" />
   }
 
-  if (isLoading) {
-    return (
-      <div className="border rounded-md overflow-hidden w-full">
-        <div className="overflow-x-auto">
-          <Table className="w-full">
-            <TableHeader>
-              <TableRow>
-                {columns.map((col) => (
-                  <TableHead key={col.key} className="whitespace-nowrap">
-                    {col.header}
-                  </TableHead>
-                ))}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {Array.from({ length: 5 }).map((_, i) => (
-                <TableRow key={i}>
-                  {columns.map((col) => (
-                    <TableCell key={col.key}>
-                      <Skeleton className="h-4 w-full" />
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      </div>
-    )
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event
+
+    if (over && active.id !== over.id && onColumnReorder) {
+      onColumnReorder(active.id as string, over.id as string)
+    }
   }
 
-  if (data.length === 0) {
-    return (
-      <div className="border rounded-md overflow-hidden w-full">
-        <div className="overflow-x-auto">
-          <Table className="w-full">
-            <TableHeader>
-              <TableRow>
-                {columns.map((col) => (
-                  <TableHead key={col.key} className="whitespace-nowrap">
+  const columnIds = columns.map((col) => col.key)
+  const isDraggable = !!onColumnReorder
+
+  const renderTableContent = () => (
+    <Table className="w-full">
+      <TableHeader>
+        <TableRow>
+          {isDraggable ? (
+            <SortableContext
+              items={columnIds}
+              strategy={horizontalListSortingStrategy}
+            >
+              {columns.map((col) => (
+                <SortableTableHead
+                  key={col.key}
+                  column={col}
+                  sortKey={sortKey}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                  getSortIcon={getSortIcon}
+                  isDraggable={isDraggable}
+                />
+              ))}
+            </SortableContext>
+          ) : (
+            columns.map((col) => (
+              <TableHead key={col.key} className="whitespace-nowrap">
+                {col.sortable ? (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="-ml-3 h-8 data-[state=open]:bg-accent"
+                    onClick={() => handleSort(col.key)}
+                  >
                     {col.header}
-                  </TableHead>
-                ))}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              <TableRow>
-                <TableCell colSpan={columns.length} className="text-center py-8 text-muted-foreground">
-                  No data available
+                    {getSortIcon(col.key)}
+                  </Button>
+                ) : (
+                  col.header
+                )}
+              </TableHead>
+            ))
+          )}
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {isLoading ? (
+          Array.from({ length: 5 }).map((_, i) => (
+            <TableRow key={i}>
+              {columns.map((col) => (
+                <TableCell key={col.key}>
+                  <Skeleton className="h-4 w-full" />
                 </TableCell>
-              </TableRow>
-            </TableBody>
-          </Table>
-        </div>
-      </div>
-    )
-  }
+              ))}
+            </TableRow>
+          ))
+        ) : data.length === 0 ? (
+          <TableRow>
+            <TableCell
+              colSpan={columns.length}
+              className="text-center py-8 text-muted-foreground"
+            >
+              No data available
+            </TableCell>
+          </TableRow>
+        ) : (
+          sortedData.map((item, index) => (
+            <TableRow key={index}>
+              {columns.map((col) => (
+                <TableCell key={col.key} className="whitespace-nowrap">
+                  {col.render(item)}
+                </TableCell>
+              ))}
+            </TableRow>
+          ))
+        )}
+      </TableBody>
+    </Table>
+  )
 
   return (
     <div className="border rounded-md overflow-hidden w-full">
       <div className="overflow-x-auto">
-        <Table className="w-full">
-          <TableHeader>
-            <TableRow>
-              {columns.map((col) => (
-                <TableHead key={col.key} className="whitespace-nowrap">
-                  {col.sortable ? (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="-ml-3 h-8 data-[state=open]:bg-accent"
-                      onClick={() => handleSort(col.key)}
-                    >
-                      {col.header}
-                      {getSortIcon(col.key)}
-                    </Button>
-                  ) : (
-                    col.header
-                  )}
-                </TableHead>
-              ))}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {sortedData.map((item, index) => (
-              <TableRow key={index}>
-                {columns.map((col) => (
-                  <TableCell key={col.key} className="whitespace-nowrap">
-                    {col.render(item)}
-                  </TableCell>
-                ))}
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+        {isDraggable ? (
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            {renderTableContent()}
+          </DndContext>
+        ) : (
+          renderTableContent()
+        )}
       </div>
     </div>
   )

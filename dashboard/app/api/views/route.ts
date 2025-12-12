@@ -24,7 +24,7 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const { name, description, filters, columns, sortKey, sortDir, isDefault } = body
+    const { name, description, filters, columns, columnOrder, sortKey, sortDir, isDefault } = body
 
     if (!name || typeof name !== 'string' || name.trim().length === 0) {
       return NextResponse.json(
@@ -47,6 +47,7 @@ export async function POST(request: Request) {
         description: description?.trim() || null,
         filters: filters || {},
         columns: columns || [],
+        columnOrder: columnOrder || [],
         sortKey: sortKey || null,
         sortDir: sortDir || null,
         isDefault: isDefault || false,
