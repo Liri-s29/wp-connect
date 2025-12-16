@@ -15,6 +15,7 @@ export type NonEmptyFilterableColumn =
   | 'color'
   | 'warranty'
   | 'batteryHealth'
+  | 'condition'
   | 'priceRaw'
   | 'rawDescription'
 
@@ -24,6 +25,7 @@ export const NON_EMPTY_FILTERABLE_COLUMNS: { key: NonEmptyFilterableColumn; labe
   { key: 'color', label: 'Color' },
   { key: 'warranty', label: 'Warranty' },
   { key: 'batteryHealth', label: 'Battery Health' },
+  { key: 'condition', label: 'Condition' },
   { key: 'priceRaw', label: 'Price' },
   { key: 'rawDescription', label: 'Description' },
 ]
@@ -68,6 +70,7 @@ export type FilterOptions = {
   models: string[]
   colors: string[]
   warranties: string[]
+  conditions: string[]
   sellers: { phone: string; name: string | null }[]
   priceRange: { min: number; max: number }
   storageRange: { min: number; max: number }
@@ -84,6 +87,7 @@ export type ColumnKey =
   | 'color'
   | 'warranty'
   | 'batteryHealth'
+  | 'condition'
   | 'seller'
   | 'sellerCity'
   | 'sellerCatalogUrl'
@@ -108,6 +112,7 @@ export const ALL_COLUMNS: ColumnDefinition[] = [
   { key: 'color', label: 'Color', group: 'device', defaultVisible: true },
   { key: 'warranty', label: 'Warranty', group: 'device', defaultVisible: true },
   { key: 'batteryHealth', label: 'Battery Health', group: 'device', defaultVisible: true },
+  { key: 'condition', label: 'Condition', group: 'device', defaultVisible: true },
   { key: 'seller', label: 'Seller', group: 'basic', defaultVisible: true },
   { key: 'sellerCity', label: 'Seller City', group: 'basic', defaultVisible: false },
   { key: 'sellerCatalogUrl', label: 'Catalog URL', group: 'basic', defaultVisible: false },

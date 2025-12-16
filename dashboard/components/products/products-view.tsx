@@ -43,6 +43,7 @@ type Product = {
   color: string | null
   warranty: string | null
   batteryHealth: string | null
+  condition: string | null
   isActive: boolean
   firstSeenAt: Date
   lastSeenAt: Date
@@ -142,6 +143,7 @@ export function ProductsView({ products }: ProductsViewProps) {
       product.color || '',
       product.warranty || '',
       product.batteryHealth || '',
+      product.condition || '',
       product.seller.name || '',
       product.seller.phoneNumber,
     ],
@@ -275,6 +277,13 @@ export function ProductsView({ products }: ProductsViewProps) {
         sortable: true,
         sortValue: (product: Product) => product.batteryHealth || '',
         render: (product: Product) => product.batteryHealth || '-',
+      },
+      {
+        key: 'condition' as const,
+        header: 'Condition',
+        sortable: true,
+        sortValue: (product: Product) => product.condition || '',
+        render: (product: Product) => product.condition || '-',
       },
       {
         key: 'seller' as const,
@@ -510,6 +519,12 @@ export function ProductsView({ products }: ProductsViewProps) {
                       <div>
                         <span className="text-muted-foreground">Battery:</span>
                         <p className="font-medium">{product.batteryHealth}</p>
+                      </div>
+                    )}
+                    {product.condition && (
+                      <div>
+                        <span className="text-muted-foreground">Condition:</span>
+                        <p className="font-medium">{product.condition}</p>
                       </div>
                     )}
                   </div>

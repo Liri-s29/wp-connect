@@ -47,6 +47,7 @@ type EnrichmentResult = {
   color: string | null;
   warranty: string | null;
   batteryHealth: string | null;
+  condition: string | null;
 };
 
 function emptyResult(id: string): EnrichmentResult {
@@ -57,6 +58,7 @@ function emptyResult(id: string): EnrichmentResult {
     color: null,
     warranty: null,
     batteryHealth: null,
+    condition: null,
   };
 }
 
@@ -78,16 +80,23 @@ async function enrichBatchWithOpenAI(
   }));
 
   const prompt = `
-You are a product catalog normalization assistant for used/new smartphones.
+You are a product catalog normalization assistant for used/new iPhones.
+
+IMPORTANT VALIDATION RULES:
+1. ONLY process iPhone 13 through iPhone 17 series devices (including mini, Plus, Pro, Pro Max, e, and Air variants)
+2. Valid models: iPhone 13/13 mini/13 Pro/13 Pro Max, iPhone 14/14 Plus/14 Pro/14 Pro Max, iPhone 15/15 Plus/15 Pro/15 Pro Max, iPhone 16/16 Plus/16 Pro/16 Pro Max/16e, iPhone 17/17 Pro/iPhone Air
+3. If a product is NOT a valid iPhone 13-17 device (e.g., older models like iPhone 12, iPhone SE, or accessories like cases, chargers, cables, screen protectors, AirPods), set modelName to "EXCLUDE"
+
 For each input product, extract:
-- "modelName": normalized model name (e.g. "iPhone 14 Pro Max").
-- "storageGb": storage capacity with unit (e.g. "128 GB").
-- "color": short color description.
-- "warranty": short warranty description if present, else "".
-- "batteryHealth": battery health percentage if present (e.g. "85%", "90%"), else "". Note: also commonly written as "BH" or "bh".
+- "modelName": Normalized model name (e.g. "iPhone 14 Pro Max"). Set to "EXCLUDE" if not a valid iPhone 13-17 device or if it's an accessory.
+- "storageGb": Storage capacity with unit (e.g. "128 GB").
+- "color": Short color description.
+- "warranty": Short warranty description if present, else "".
+- "batteryHealth": Battery health percentage if present (e.g. "85%", "90%"), else "". Note: also commonly written as "BH" or "bh".
+- "condition": Product condition (e.g. "New", "Used", "Like new", "Refurbished", "Minor scratches", "Dents", "Excellent"). Extract from name/description, else "".
 
 Return a STRICT JSON array with one element per input product, in the SAME ORDER, with keys:
-["id","modelName","storageGb","color","warranty","batteryHealth"].
+["id","modelName","storageGb","color","warranty","batteryHealth","condition"].
 Do not include any extra text before or after the JSON.
 
 Products:
@@ -146,6 +155,10 @@ ${JSON.stringify(payload, null, 2)}
           typeof enriched.batteryHealth === 'string' && enriched.batteryHealth.trim().length > 0
             ? enriched.batteryHealth
             : null,
+        condition:
+          typeof enriched.condition === 'string' && enriched.condition.trim().length > 0
+            ? enriched.condition
+            : null,
       };
     });
   } catch (error) {
@@ -172,17 +185,23 @@ async function enrichBatchWithGemini(
   }));
 
   const prompt = `
-You are a product catalog normalization assistant for used/new smartphones.
+You are a product catalog normalization assistant for used/new iPhones.
+
+IMPORTANT VALIDATION RULES:
+1. ONLY process iPhone 13 through iPhone 17 series devices (including mini, Plus, Pro, Pro Max, e, and Air variants)
+2. Valid models: iPhone 13/13 mini/13 Pro/13 Pro Max, iPhone 14/14 Plus/14 Pro/14 Pro Max, iPhone 15/15 Plus/15 Pro/15 Pro Max, iPhone 16/16 Plus/16 Pro/16 Pro Max/16e, iPhone 17/17 Pro/iPhone Air
+3. If a product is NOT a valid iPhone 13-17 device (e.g., older models like iPhone 12, iPhone SE, or accessories like cases, chargers, cables, screen protectors, AirPods), set modelName to "EXCLUDE"
+
 For each input product, extract:
-- "modelName": normalized model name (e.g. "iPhone 14 Pro Max").
-- "storageGb": storage capacity with unit (e.g. "128 GB").
-- "color": short color description.
-- "warranty": short warranty description if present, else "".
-- "batteryHealth": short battery health description if present, else "". [note: also present as bh]
+- "modelName": Normalized model name (e.g. "iPhone 14 Pro Max"). Set to "EXCLUDE" if not a valid iPhone 13-17 device or if it's an accessory.
+- "storageGb": Storage capacity with unit (e.g. "128 GB").
+- "color": Short color description.
+- "warranty": Short warranty description if present, else "".
+- "batteryHealth": Battery health percentage if present (e.g. "85%", "90%"), else "". Note: also commonly written as "BH" or "bh".
+- "condition": Product condition (e.g. "New", "Used", "Like new", "Refurbished", "Minor scratches", "Dents", "Excellent"). Extract from name/description, else "".
 
 Return a STRICT JSON array with one element per input product, in the SAME ORDER, with keys:
-["id","modelName","storageGb","color","warranty","batteryHealth"].
-
+["id","modelName","storageGb","color","warranty","batteryHealth","condition"].
 
 Products:
 ${JSON.stringify(payload, null, 2)}
@@ -255,6 +274,10 @@ ${JSON.stringify(payload, null, 2)}
           typeof enriched.batteryHealth === 'string' && enriched.batteryHealth.trim().length > 0
             ? enriched.batteryHealth
             : null,
+        condition:
+          typeof enriched.condition === 'string' && enriched.condition.trim().length > 0
+            ? enriched.condition
+            : null,
       };
     });
   } catch (error) {
@@ -315,6 +338,7 @@ async function main() {
       color: enriched.color,
       warranty: enriched.warranty,
       batteryHealth: enriched.batteryHealth,
+      condition: enriched.condition,
     };
   });
 

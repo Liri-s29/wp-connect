@@ -14,6 +14,7 @@ export async function getProducts() {
           phoneNumber: true,
           name: true,
           city: true,
+          catalogueUrl: true,
         },
       },
     },

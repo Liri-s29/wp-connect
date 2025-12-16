@@ -46,6 +46,7 @@ function buildSnapshot(args: {
     color: string | null;
     warranty: string | null;
     batteryHealth: string | null;
+    condition: string | null;
     dataHash: string | null;
     isActive: boolean;
     firstSeenAt: Date;
@@ -75,6 +76,7 @@ function buildSnapshot(args: {
     color: productRow.color,
     warranty: productRow.warranty,
     batteryHealth: productRow.batteryHealth,
+    condition: productRow.condition,
     dataHash: productRow.dataHash,
     isActive: productRow.isActive,
     firstSeenAt: productRow.firstSeenAt,
@@ -232,11 +234,19 @@ async function processSellerGroup(
           const { input, existing, changeType, dataHash } = item;
 
           if (changeType === 'UNCHANGED' && existing) {
+            // Also update LLM-enriched fields in case they were re-extracted
             await tx.product.update({
               where: { id: input.id },
               data: {
                 lastSeenAt: scanTime,
                 isActive: true,
+                // Update enrichment fields even for UNCHANGED products
+                modelName: input.modelName ?? existing.modelName,
+                storageGb: input.storageGb ?? existing.storageGb,
+                color: input.color ?? existing.color,
+                warranty: input.warranty ?? existing.warranty,
+                batteryHealth: input.batteryHealth ?? existing.batteryHealth,
+                condition: input.condition ?? existing.condition,
               },
             });
             continue;
@@ -266,6 +276,7 @@ async function processSellerGroup(
                 color: input.color ?? null,
                 warranty: input.warranty ?? null,
                 batteryHealth: input.batteryHealth ?? null,
+                condition: input.condition ?? null,
               },
             }));
 
@@ -294,6 +305,7 @@ async function processSellerGroup(
                 color: input.color ?? null,
                 warranty: input.warranty ?? null,
                 batteryHealth: input.batteryHealth ?? null,
+                condition: input.condition ?? null,
               },
             });
           }
@@ -380,7 +392,14 @@ async function main() {
   console.log('Starting Phase 3 processor...');
   const scanTime = new Date();
 
-  const products = await loadEnrichedProducts();
+  const allProducts = await loadEnrichedProducts();
+
+  // Filter out products marked as EXCLUDE by AI (non-iPhone 13-17 or accessories)
+  const products = allProducts.filter((p) => p.modelName !== 'EXCLUDE');
+  const excludedCount = allProducts.length - products.length;
+  if (excludedCount > 0) {
+    console.log(`Filtered out ${excludedCount} non-iPhone 13-17 products (marked as EXCLUDE by AI)`);
+  }
 
   const grouped = new Map<string, EnrichedProduct[]>();
   for (const p of products) {
@@ -392,7 +411,7 @@ async function main() {
   }
 
   console.log(
-    `Loaded ${products.length} products from products.enriched.json for ${grouped.size} seller(s).`,
+    `Processing ${products.length} valid products from products.enriched.json for ${grouped.size} seller(s).`,
   );
 
   for (const [sellerPhone, items] of grouped.entries()) {

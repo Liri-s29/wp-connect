@@ -16,6 +16,7 @@ export type EnrichedProduct = {
   color?: string | null;
   warranty?: string | null;
   batteryHealth?: string | null;
+  condition?: string | null;
 };
 
 

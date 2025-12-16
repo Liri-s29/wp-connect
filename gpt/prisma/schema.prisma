@@ -40,6 +40,7 @@ model Product {
   color             String?
   warranty          String?
   batteryHealth     String?   @map("battery_health")
+  condition         String?   @db.Text
 
   // State / tracking
   dataHash          String?   @map("data_hash")

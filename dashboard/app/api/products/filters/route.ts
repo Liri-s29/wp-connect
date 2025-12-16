@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic'
 export async function GET() {
   try {
     // Fetch distinct values from the database
-    const [models, colors, warranties, sellers, priceStats, storageStats, batteryStats] =
+    const [models, colors, warranties, conditions, sellers, priceStats, storageStats, batteryStats] =
       await Promise.all([
         // Distinct model names (excluding nulls)
         prisma.product.findMany({
@@ -30,6 +30,14 @@ export async function GET() {
           select: { warranty: true },
           distinct: ['warranty'],
           orderBy: { warranty: 'asc' },
+        }),
+
+        // Distinct conditions (excluding nulls)
+        prisma.product.findMany({
+          where: { condition: { not: null } },
+          select: { condition: true },
+          distinct: ['condition'],
+          orderBy: { condition: 'asc' },
         }),
 
         // Sellers list
@@ -80,6 +88,7 @@ export async function GET() {
       models: models.map((m) => m.modelName).filter(Boolean) as string[],
       colors: colors.map((c) => c.color).filter(Boolean) as string[],
       warranties: warranties.map((w) => w.warranty).filter(Boolean) as string[],
+      conditions: conditions.map((c) => c.condition).filter(Boolean) as string[],
       sellers: sellers.map((s) => ({
         phone: s.phoneNumber,
         name: s.name,
