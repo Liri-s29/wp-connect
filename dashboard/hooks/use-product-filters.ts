@@ -18,6 +18,7 @@ type Product = {
   priceRaw: any
   currency: string | null
   availability: string | null
+  imageCount: number | null
   modelName: string | null
   storageGb: string | null
   color: string | null
@@ -79,6 +80,15 @@ function parseFiltersFromURL(searchParams: URLSearchParams): Partial<ProductFilt
     }
   }
 
+  const imageCountMin = searchParams.get('imageCountMin')
+  const imageCountMax = searchParams.get('imageCountMax')
+  if (imageCountMin || imageCountMax) {
+    filters.imageCountRange = {
+      min: imageCountMin ? Number(imageCountMin) : null,
+      max: imageCountMax ? Number(imageCountMax) : null,
+    }
+  }
+
   const activeIn = searchParams.get('activeIn')
   if (activeIn) filters.activeInDays = Number(activeIn)
 
@@ -112,6 +122,9 @@ function serializeFiltersToURL(filters: ProductFilters): Record<string, string> 
 
   if (filters.batteryRange.min !== null) params.batteryMin = String(filters.batteryRange.min)
   if (filters.batteryRange.max !== null) params.batteryMax = String(filters.batteryRange.max)
+
+  if (filters.imageCountRange.min !== null) params.imageCountMin = String(filters.imageCountRange.min)
+  if (filters.imageCountRange.max !== null) params.imageCountMax = String(filters.imageCountRange.max)
 
   if (filters.activeInDays !== null) params.activeIn = String(filters.activeInDays)
 
@@ -306,6 +319,15 @@ export function useProductFilters(products: Product[]) {
         return false
       }
       if (filters.batteryRange.max !== null && (battery === null || battery > filters.batteryRange.max)) {
+        return false
+      }
+
+      // Image count range filter
+      const imageCount = product.imageCount
+      if (filters.imageCountRange.min !== null && (imageCount === null || imageCount < filters.imageCountRange.min)) {
+        return false
+      }
+      if (filters.imageCountRange.max !== null && (imageCount === null || imageCount > filters.imageCountRange.max)) {
         return false
       }
 

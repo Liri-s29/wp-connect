@@ -28,6 +28,7 @@ model Product {
   rawDescription String?          @map("raw_description")
   currency       String?          @db.VarChar(10)
   availability   String?
+  imageCount     Int?             @map("image_count")
   modelName      String?          @map("model_name")
   storageGb      String?          @map("storage_gb")
   color          String?

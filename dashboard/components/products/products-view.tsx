@@ -38,6 +38,7 @@ type Product = {
   priceRaw: any
   currency: string | null
   availability: string | null
+  imageCount: number | null
   modelName: string | null
   storageGb: string | null
   color: string | null

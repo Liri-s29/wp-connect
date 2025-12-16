@@ -40,7 +40,7 @@ const VALID_IPHONE_MODELS = [
 export async function GET() {
   try {
     // Fetch distinct values from the database
-    const [models, colors, warranties, conditions, sellers, priceStats, storageStats, batteryStats] =
+    const [models, colors, warranties, conditions, sellers, priceStats, storageStats, batteryStats, imageCountStats] =
       await Promise.all([
         // Distinct model names (excluding nulls)
         prisma.product.findMany({
@@ -100,6 +100,13 @@ export async function GET() {
           select: { batteryHealth: true },
           distinct: ['batteryHealth'],
         }),
+
+        // Image count range (min/max)
+        prisma.product.aggregate({
+          _min: { imageCount: true },
+          _max: { imageCount: true },
+          where: { imageCount: { not: null } },
+        }),
       ])
 
     // Parse storage values to get numeric range
@@ -143,6 +150,10 @@ export async function GET() {
       batteryRange: {
         min: batteryValues.length > 0 ? Math.min(...batteryValues) : 0,
         max: batteryValues.length > 0 ? Math.max(...batteryValues) : 100,
+      },
+      imageCountRange: {
+        min: imageCountStats._min.imageCount ?? 0,
+        max: imageCountStats._max.imageCount ?? 10,
       },
     }
 

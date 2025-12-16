@@ -41,6 +41,7 @@ export type ProductFilters = {
   priceRange: RangeFilterValue
   storageRange: RangeFilterValue
   batteryRange: RangeFilterValue
+  imageCountRange: RangeFilterValue
 
   // Time-based filter
   activeInDays: TimespanFilterValue
@@ -60,6 +61,7 @@ export const DEFAULT_FILTERS: ProductFilters = {
   priceRange: { min: null, max: null },
   storageRange: { min: null, max: null },
   batteryRange: { min: null, max: null },
+  imageCountRange: { min: null, max: null },
   activeInDays: null,
   isActive: null,
   nonEmptyColumns: [],
@@ -75,6 +77,7 @@ export type FilterOptions = {
   priceRange: { min: number; max: number }
   storageRange: { min: number; max: number }
   batteryRange: { min: number; max: number }
+  imageCountRange: { min: number; max: number }
 }
 
 // Column definitions for products table
@@ -150,6 +153,8 @@ export function hasActiveFilters(filters: ProductFilters): boolean {
     filters.storageRange.max !== null ||
     filters.batteryRange.min !== null ||
     filters.batteryRange.max !== null ||
+    filters.imageCountRange.min !== null ||
+    filters.imageCountRange.max !== null ||
     filters.activeInDays !== null ||
     filters.isActive !== null ||
     filters.nonEmptyColumns.length > 0
@@ -166,6 +171,7 @@ export function countActiveFilters(filters: ProductFilters): number {
   if (filters.priceRange.min !== null || filters.priceRange.max !== null) count++
   if (filters.storageRange.min !== null || filters.storageRange.max !== null) count++
   if (filters.batteryRange.min !== null || filters.batteryRange.max !== null) count++
+  if (filters.imageCountRange.min !== null || filters.imageCountRange.max !== null) count++
   if (filters.activeInDays !== null) count++
   if (filters.isActive !== null) count++
   if (filters.nonEmptyColumns.length > 0) count += filters.nonEmptyColumns.length

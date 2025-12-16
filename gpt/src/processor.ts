@@ -41,6 +41,7 @@ function buildSnapshot(args: {
     priceRaw: any;
     currency: string | null;
     availability: string | null;
+    imageCount: number | null;
     modelName: string | null;
     storageGb: string | null;
     color: string | null;
@@ -70,6 +71,7 @@ function buildSnapshot(args: {
     priceRaw: productRow.priceRaw ?? null,
     currency: productRow.currency,
     availability: productRow.availability,
+    imageCount: productRow.imageCount,
     productUrl: productUrl ?? null,
     modelName: productRow.modelName,
     storageGb: productRow.storageGb,
@@ -240,6 +242,8 @@ async function processSellerGroup(
               data: {
                 lastSeenAt: scanTime,
                 isActive: true,
+                // Update imageCount from scraper
+                imageCount: input.imageCount ?? existing.imageCount,
                 // Update enrichment fields even for UNCHANGED products
                 modelName: input.modelName ?? existing.modelName,
                 storageGb: input.storageGb ?? existing.storageGb,
@@ -266,6 +270,7 @@ async function processSellerGroup(
                 priceRaw: priceRawValue,
                 currency: input.currency ?? null,
                 availability: input.availability ?? null,
+                imageCount: input.imageCount ?? null,
                 dataHash,
                 isActive: true,
                 firstSeenAt: scanTime,
@@ -293,6 +298,7 @@ async function processSellerGroup(
                 priceRaw: priceRawValue,
                 currency: input.currency ?? null,
                 availability: input.availability ?? null,
+                imageCount: input.imageCount ?? null,
                 dataHash,
                 isActive: true,
                 firstSeenAt: existing.firstSeenAt,

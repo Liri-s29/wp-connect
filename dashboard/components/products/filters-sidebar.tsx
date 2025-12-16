@@ -142,6 +142,7 @@ export function FiltersSidebar({
   const priceRange = filterOptions?.priceRange || { min: 0, max: 200000 }
   const storageRange = filterOptions?.storageRange || { min: 0, max: 1024 }
   const batteryRange = filterOptions?.batteryRange || { min: 0, max: 100 }
+  const imageCountRange = filterOptions?.imageCountRange || { min: 0, max: 10 }
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -231,6 +232,18 @@ export function FiltersSidebar({
               value={localFilters.batteryRange}
               onChange={(value) => updateFilter('batteryRange', value)}
               unit="%"
+            />
+
+            <Separator />
+
+            {/* Image Count Filter */}
+            <RangeFilterControl
+              label="Image Count"
+              min={imageCountRange.min}
+              max={imageCountRange.max}
+              step={1}
+              value={localFilters.imageCountRange}
+              onChange={(value) => updateFilter('imageCountRange', value)}
             />
 
             <Separator />

@@ -41,6 +41,7 @@ type ScrapedProduct = {
   sellerName?: string;
   sellerCity?: string;
   sellerCatalogueUrl?: string;
+  imageCount: number;
 };
 
 type SellerConfig = {
@@ -49,6 +50,42 @@ type SellerConfig = {
   city?: string;
   catalogueUrl?: string;
 };
+
+// Extract image count from product data (already fetched from getProducts/getCollections)
+function getImageCount(product: any): number {
+  let count = 0;
+
+  // Check image_cdn_urls (from WhatsApp catalog API)
+  if (product.image_cdn_urls && Array.isArray(product.image_cdn_urls)) {
+    count = product.image_cdn_urls.length > 0 ? 1 : 0;
+  }
+  // Check additional_image_cdn_urls
+  if (product.additional_image_cdn_urls && Array.isArray(product.additional_image_cdn_urls)) {
+    count += product.additional_image_cdn_urls.length;
+  }
+
+  // Alternative field names used by wppconnect
+  if (count === 0) {
+    // Check for main image
+    if (product.imageFull || product.imageUrl || product.image || product.imageHashes) {
+      count = 1;
+    }
+    // Check additionalImages array
+    if (product.additionalImages && Array.isArray(product.additionalImages)) {
+      count += product.additionalImages.length;
+    }
+    // Check images array (some versions)
+    if (product.images && Array.isArray(product.images)) {
+      count = product.images.length;
+    }
+    // Check mediaCount if available
+    if (product.mediaCount && typeof product.mediaCount === 'number') {
+      count = product.mediaCount;
+    }
+  }
+
+  return count;
+}
 
 // Strict iPhone detection - only actual iPhone devices, not accessories
 function isIPhone(name: string, description: string): boolean {
@@ -279,6 +316,7 @@ async function scrapeCatalogForSeller(
       sellerName: sellerName,
       sellerCity: sellerCity,
       sellerCatalogueUrl: sellerCatalogueUrl,
+      imageCount: getImageCount(p),
     };
 
     outputList.push(record);

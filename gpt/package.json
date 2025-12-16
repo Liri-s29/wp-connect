@@ -7,6 +7,7 @@
     "start:prod": "node dist/index.js",
     "build": "tsc",
     "test": "echo \"Error: no test specified\" && exit 1",
+    "test-api": "ts-node src/test-server.ts",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev --name init",
     "prisma:studio": "prisma studio",

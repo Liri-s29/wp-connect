@@ -33,6 +33,7 @@ model Product {
   priceRaw          Decimal?  @db.Decimal(12, 2) @map("price_raw")
   currency          String?   @db.VarChar(10)
   availability      String?   @db.Text
+  imageCount        Int?      @map("image_count")
 
   // LLM-enriched data
   modelName         String?   @map("model_name")

@@ -11,6 +11,7 @@ export type EnrichedProduct = {
   sellerName?: string;
   sellerCity?: string;
   sellerCatalogueUrl?: string;
+  imageCount?: number;
   modelName?: string | null;
   storageGb?: string | null;
   color?: string | null;
