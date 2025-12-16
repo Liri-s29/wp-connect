@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { scraperService } from '@/lib/scraper-service'
 
+export const dynamic = 'force-dynamic'
+
 export async function POST() {
   try {
     const result = await scraperService.startScraper('MANUAL')
