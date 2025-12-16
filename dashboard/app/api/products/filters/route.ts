@@ -3,6 +3,40 @@ import { prisma } from '@/lib/prisma'
 
 export const dynamic = 'force-dynamic'
 
+// Valid iPhone models (iPhone 13-17 series only)
+// Based on enrich.ts validation rules
+const VALID_IPHONE_MODELS = [
+  // iPhone 13 series
+  'iPhone 13',
+  'iPhone 13 Mini',
+  'iPhone 13 mini',
+  'iPhone 13 Pro',
+  'iPhone 13 Pro Max',
+  // iPhone 14 series
+  'iPhone 14',
+  'iPhone 14 Plus',
+  'iPhone 14 Pkus', // Common typo
+  'iPhone 14 Pro',
+  'iPhone 14 Pro Max',
+  // iPhone 15 series
+  'iPhone 15',
+  'iPhone 15 Plus',
+  'iPhone 15 Pro',
+  'iPhone 15 pro', // Case variation
+  'iPhone 15 Pro Max',
+  // iPhone 16 series
+  'iPhone 16',
+  'iPhone 16 Plus',
+  'iPhone 16 Pro',
+  'iPhone 16 Pro Max',
+  'iPhone 16e',
+  // iPhone 17 series
+  'iPhone 17',
+  'iPhone 17 Pro',
+  'iPhone 17 Pro Max',
+  'iPhone Air',
+]
+
 export async function GET() {
   try {
     // Fetch distinct values from the database
@@ -84,8 +118,13 @@ export async function GET() {
       })
       .filter((v): v is number => v !== null)
 
+    // Filter models to only include valid iPhone 13-17 models
+    const validModels = models
+      .map((m) => m.modelName)
+      .filter((m): m is string => m !== null && VALID_IPHONE_MODELS.includes(m))
+
     const response = {
-      models: models.map((m) => m.modelName).filter(Boolean) as string[],
+      models: validModels,
       colors: colors.map((c) => c.color).filter(Boolean) as string[],
       warranties: warranties.map((w) => w.warranty).filter(Boolean) as string[],
       conditions: conditions.map((c) => c.condition).filter(Boolean) as string[],

@@ -30,6 +30,25 @@ interface FiltersSidebarProps {
   filterOptions: FilterOptions | null
 }
 
+// Series shortcuts - maps series name to model prefixes
+const SERIES_GROUPS: Record<string, string[]> = {
+  'Series 13-17': ['iPhone 13', 'iPhone 14', 'iPhone 15', 'iPhone 16', 'iPhone 17', 'iPhone Air'],
+  'Series 13': ['iPhone 13'],
+  'Series 14': ['iPhone 14'],
+  'Series 15': ['iPhone 15'],
+  'Series 16': ['iPhone 16'],
+  'Series 17': ['iPhone 17', 'iPhone Air'],
+}
+
+// Get models that belong to a series
+function getModelsForSeries(seriesKey: string, allModels: string[]): string[] {
+  const prefixes = SERIES_GROUPS[seriesKey]
+  if (!prefixes) return []
+  return allModels.filter((model) =>
+    prefixes.some((prefix) => model.startsWith(prefix))
+  )
+}
+
 export function FiltersSidebar({
   open,
   onOpenChange,
@@ -68,10 +87,42 @@ export function FiltersSidebar({
     setLocalFilters((prev) => ({ ...prev, [key]: value }))
   }
 
-  const modelOptions = (filterOptions?.models || []).map((m) => ({
+  const allModels = filterOptions?.models || []
+
+  // Create series options at the top
+  const seriesOptions = Object.keys(SERIES_GROUPS).map((series) => ({
+    value: `__series__${series}`,
+    label: `📱 ${series}`,
+  }))
+
+  // Individual model options
+  const individualModelOptions = allModels.map((m) => ({
     value: m,
     label: m,
   }))
+
+  // Combined options: series first, then individual models
+  const modelOptions = [...seriesOptions, ...individualModelOptions]
+
+  // Custom handler for model selection that expands series
+  const handleModelSelection = (selected: string[]) => {
+    const expandedModels: string[] = []
+    const regularModels: string[] = []
+
+    for (const value of selected) {
+      if (value.startsWith('__series__')) {
+        const seriesKey = value.replace('__series__', '')
+        const seriesModels = getModelsForSeries(seriesKey, allModels)
+        expandedModels.push(...seriesModels)
+      } else {
+        regularModels.push(value)
+      }
+    }
+
+    // Combine and deduplicate
+    const uniqueModels = [...new Set([...regularModels, ...expandedModels])]
+    updateFilter('models', uniqueModels)
+  }
 
   const colorOptions = (filterOptions?.colors || []).map((c) => ({
     value: c,
@@ -138,7 +189,7 @@ export function FiltersSidebar({
               label="Model"
               options={modelOptions}
               selected={localFilters.models}
-              onChange={(value) => updateFilter('models', value)}
+              onChange={handleModelSelection}
               placeholder="All models"
               searchPlaceholder="Search models..."
             />
