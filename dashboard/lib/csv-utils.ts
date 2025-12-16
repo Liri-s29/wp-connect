@@ -13,6 +13,7 @@ type Product = {
   color: string | null
   warranty: string | null
   batteryHealth: string | null
+  condition: string | null
   isActive: boolean
   firstSeenAt: Date
   lastSeenAt: Date

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, useMemo } from 'react'
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Play, Square, Trash2, RefreshCw, QrCode } from 'lucide-react'
 
@@ -17,22 +17,19 @@ export default function AuthPage() {
   const logsEndRef = useRef<HTMLDivElement>(null)
   const eventSourceRef = useRef<EventSource | null>(null)
 
-  useEffect(() => {
-    connectToStream()
-    fetchStatus()
-
-    return () => {
-      if (eventSourceRef.current) {
-        eventSourceRef.current.close()
+  const fetchStatus = useCallback(async () => {
+    try {
+      const res = await fetch('/api/scraper/start')
+      if (res.ok) {
+        const status = await res.json()
+        setScraperStatus(status)
       }
+    } catch (error) {
+      console.error('Failed to fetch status:', error)
     }
   }, [])
 
-  useEffect(() => {
-    logsEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [logs])
-
-  const connectToStream = () => {
+  const connectToStream = useCallback(() => {
     if (eventSourceRef.current) {
       eventSourceRef.current.close()
     }
@@ -61,19 +58,22 @@ export default function AuthPage() {
       setIsConnected(false)
       setTimeout(connectToStream, 3000)
     }
-  }
+  }, [fetchStatus])
 
-  const fetchStatus = async () => {
-    try {
-      const res = await fetch('/api/scraper/start')
-      if (res.ok) {
-        const status = await res.json()
-        setScraperStatus(status)
+  useEffect(() => {
+    connectToStream()
+    fetchStatus()
+
+    return () => {
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close()
       }
-    } catch (error) {
-      console.error('Failed to fetch status:', error)
     }
-  }
+  }, [connectToStream, fetchStatus])
+
+  useEffect(() => {
+    logsEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [logs])
 
   const handleStartScraper = async () => {
     try {
