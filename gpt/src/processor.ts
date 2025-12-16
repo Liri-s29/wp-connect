@@ -400,11 +400,11 @@ async function main() {
 
   const allProducts = await loadEnrichedProducts();
 
-  // Filter out products marked as EXCLUDE by AI (non-iPhone 13-17 or accessories)
-  const products = allProducts.filter((p) => p.modelName !== 'EXCLUDE');
+  // Filter out products marked as EXCLUDE by AI (non-iPhone 13-17 or accessories) or with null model names
+  const products = allProducts.filter((p) => p.modelName && p.modelName !== 'EXCLUDE');
   const excludedCount = allProducts.length - products.length;
   if (excludedCount > 0) {
-    console.log(`Filtered out ${excludedCount} non-iPhone 13-17 products (marked as EXCLUDE by AI)`);
+    console.log(`Filtered out ${excludedCount} products (EXCLUDE or null model name)`);
   }
 
   const grouped = new Map<string, EnrichedProduct[]>();
