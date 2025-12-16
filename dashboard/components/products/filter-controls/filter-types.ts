@@ -91,6 +91,7 @@ export type ColumnKey =
   | 'warranty'
   | 'batteryHealth'
   | 'condition'
+  | 'imageCount'
   | 'seller'
   | 'sellerCity'
   | 'sellerCatalogUrl'
@@ -116,6 +117,7 @@ export const ALL_COLUMNS: ColumnDefinition[] = [
   { key: 'warranty', label: 'Warranty', group: 'device', defaultVisible: true },
   { key: 'batteryHealth', label: 'Battery Health', group: 'device', defaultVisible: true },
   { key: 'condition', label: 'Condition', group: 'device', defaultVisible: true },
+  { key: 'imageCount', label: 'Image Count', group: 'device', defaultVisible: true },
   { key: 'seller', label: 'Seller', group: 'basic', defaultVisible: true },
   { key: 'sellerCity', label: 'Seller City', group: 'basic', defaultVisible: false },
   { key: 'sellerCatalogUrl', label: 'Catalog URL', group: 'basic', defaultVisible: false },

@@ -287,6 +287,13 @@ export function ProductsView({ products }: ProductsViewProps) {
         render: (product: Product) => product.condition || '-',
       },
       {
+        key: 'imageCount' as const,
+        header: 'Images',
+        sortable: true,
+        sortValue: (product: Product) => product.imageCount ?? 0,
+        render: (product: Product) => product.imageCount ?? '-',
+      },
+      {
         key: 'seller' as const,
         header: 'Seller',
         sortable: true,

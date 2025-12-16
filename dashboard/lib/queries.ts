@@ -68,6 +68,7 @@ type RawSellerMetric = {
   phones_last_week: bigint | number;
   avg_listings_week: any;
   product_info_score: any;
+  avg_image_count: any;
   is_valid: boolean;
   last_scan_date: Date | null;
 };
@@ -83,6 +84,7 @@ export type SellerMetric = {
   phones_last_week: number;
   avg_listings_week: number;
   product_info_score: number;
+  avg_image_count: number;
   is_valid: boolean;
   last_scan_date: Date | null;
 };
@@ -104,6 +106,7 @@ export async function getSellerMetrics(): Promise<SellerMetric[]> {
     phones_last_week: Number(metric.phones_last_week ?? 0),
     avg_listings_week: Number(metric.avg_listings_week ?? 0),
     product_info_score: Number(metric.product_info_score ?? 0),
+    avg_image_count: Number(metric.avg_image_count ?? 0),
     is_valid: metric.is_valid ?? false,
     last_scan_date: metric.last_scan_date,
   }));

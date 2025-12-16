@@ -11,7 +11,8 @@ import { Pagination } from '@/components/pagination'
 import { useSearchPagination } from '@/hooks/use-search-pagination'
 import { useColumnOrder } from '@/hooks/use-column-order'
 import { Button } from '@/components/ui/button'
-import { ExternalLink, Phone, MapPin } from 'lucide-react'
+import { ExternalLink, Phone, MapPin, Columns3 } from 'lucide-react'
+import { SellerMetricsColumnCustomizer } from './seller-metrics-column-customizer'
 import type { SellerMetric } from '@/lib/queries'
 
 interface SellerMetricsViewProps {
@@ -27,10 +28,36 @@ type SellerMetricColumnKey =
   | 'phones_last_week'
   | 'active_avg_listings_week'
   | 'product_info_score'
+  | 'avg_image_count'
   | 'avg_listings_week'
   | 'current_active_inventory'
   | 'total_phones'
   | 'seller_url'
+
+type ColumnDefinition = {
+  key: SellerMetricColumnKey
+  label: string
+  group: 'basic' | 'metrics' | 'links'
+  defaultVisible: boolean
+}
+
+const ALL_COLUMNS: ColumnDefinition[] = [
+  { key: 'seller_name', label: 'Seller Name', group: 'basic', defaultVisible: true },
+  { key: 'seller_contact', label: 'Contact', group: 'basic', defaultVisible: true },
+  { key: 'city', label: 'City', group: 'basic', defaultVisible: true },
+  { key: 'phones_last_week', label: 'Phones Last Week', group: 'metrics', defaultVisible: true },
+  { key: 'active_avg_listings_week', label: 'Active Avg/Week', group: 'metrics', defaultVisible: true },
+  { key: 'product_info_score', label: 'Product Info Score', group: 'metrics', defaultVisible: true },
+  { key: 'avg_image_count', label: 'Avg Image Count', group: 'metrics', defaultVisible: true },
+  { key: 'avg_listings_week', label: 'Avg Listing/Week', group: 'metrics', defaultVisible: true },
+  { key: 'current_active_inventory', label: 'Active (3 days)', group: 'metrics', defaultVisible: true },
+  { key: 'total_phones', label: 'Total Phones', group: 'metrics', defaultVisible: true },
+  { key: 'seller_url', label: 'Seller URL', group: 'links', defaultVisible: true },
+]
+
+const DEFAULT_VISIBLE_COLUMNS: SellerMetricColumnKey[] = ALL_COLUMNS
+  .filter((col) => col.defaultVisible)
+  .map((col) => col.key)
 
 const DEFAULT_COLUMN_ORDER: SellerMetricColumnKey[] = [
   'seller_name',
@@ -39,6 +66,7 @@ const DEFAULT_COLUMN_ORDER: SellerMetricColumnKey[] = [
   'phones_last_week',
   'active_avg_listings_week',
   'product_info_score',
+  'avg_image_count',
   'avg_listings_week',
   'current_active_inventory',
   'total_phones',
@@ -48,6 +76,8 @@ const DEFAULT_COLUMN_ORDER: SellerMetricColumnKey[] = [
 export function SellerMetricsView({ metrics }: SellerMetricsViewProps) {
   const [view, setView] = useState<'table' | 'cards'>('table')
   const [filter, setFilter] = useState<FilterType>('all')
+  const [columnsOpen, setColumnsOpen] = useState(false)
+  const [visibleColumns, setVisibleColumns] = useState<SellerMetricColumnKey[]>(DEFAULT_VISIBLE_COLUMNS)
 
   const filteredByValidity = metrics.filter((m) => {
     if (filter === 'valid') return m.is_valid
@@ -147,6 +177,13 @@ export function SellerMetricsView({ metrics }: SellerMetricsViewProps) {
         ),
       },
       {
+        key: 'avg_image_count',
+        header: 'Avg Images',
+        sortable: true,
+        sortValue: (metric: SellerMetric) => metric.avg_image_count,
+        render: (metric: SellerMetric) => metric.avg_image_count.toFixed(1),
+      },
+      {
         key: 'avg_listings_week',
         header: 'Avg Listing/Week',
         sortable: true,
@@ -189,10 +226,12 @@ export function SellerMetricsView({ metrics }: SellerMetricsViewProps) {
     []
   )
 
-  const tableColumns = useMemo(
-    () => getOrderedColumns(allTableColumns),
-    [allTableColumns, getOrderedColumns]
-  )
+  const tableColumns = useMemo(() => {
+    const visibleCols = allTableColumns.filter((col) =>
+      visibleColumns.includes(col.key as SellerMetricColumnKey)
+    )
+    return getOrderedColumns(visibleCols)
+  }, [allTableColumns, visibleColumns, getOrderedColumns])
 
   return (
     <div className="space-y-6">
@@ -205,7 +244,17 @@ export function SellerMetricsView({ metrics }: SellerMetricsViewProps) {
           resultCount={filteredData.length}
           totalCount={metrics.length}
         />
-        <ViewToggle value={view} onValueChange={setView} />
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            className="gap-2"
+            onClick={() => setColumnsOpen(true)}
+          >
+            <Columns3 className="h-4 w-4" />
+            Columns
+          </Button>
+          <ViewToggle value={view} onValueChange={setView} />
+        </div>
       </div>
 
       {view === 'table' ? (
@@ -304,6 +353,13 @@ export function SellerMetricsView({ metrics }: SellerMetricsViewProps) {
           />
         </>
       )}
+
+      <SellerMetricsColumnCustomizer
+        open={columnsOpen}
+        onOpenChange={setColumnsOpen}
+        visibleColumns={visibleColumns}
+        onColumnsChange={setVisibleColumns}
+      />
     </div>
   )
 }
