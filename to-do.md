@@ -6,9 +6,6 @@
 
  git pull origin main && cd gpt && npm install && npx prisma migrate deploy && cd ../dashboard && npm install && npx prisma generate && npm run build && pm2 restart dashboard
 
- ssh root@172.237.44.119
- JVV@whJqc594c@A
-
   cd /path/to/wp-connect
   git pull
 
