@@ -4,22 +4,7 @@
 4. Get image count from the products view. HIGH EFFORT
 
 
- git pull origin main && cd gpt && npm install && npx prisma migrate deploy && cd ../dashboard && npm install && npx prisma generate && npm run build && pm2 restart dashboard
-
-  cd /path/to/wp-connect
-  git pull
-
-  # Install dependencies (if any changed)
-  cd gpt && npm install
-  cd ../dashboard && npm install
-
-  # Add the condition column to database
-  cd ../gpt
-  npx prisma db execute --stdin <<< "ALTER TABLE products ADD COLUMN IF NOT EXISTS condition TEXT;"
-
-  # Regenerate Prisma clients
-  npx prisma generate
-  cd ../dashboard && npx prisma generate
-
-  # Restart your dashboard (if using PM2)
-  pm2 restart dashboard
+cd gpt && npm install && npx prisma    
+  generate && npx prisma migrate deploy && cd ../dashboard && npm  
+  install && npx prisma generate && npm run build && pm2 restart   
+  wp-dashboard  
